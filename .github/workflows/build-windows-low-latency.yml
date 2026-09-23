@@ -1,0 +1,73 @@
+name: Build Apollo Windows Low Latency
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - "src/platform/windows/mic_write.cpp"
+      - ".github/workflows/build-windows-low-latency.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-cppwinrt
+            mingw-w64-ucrt-x86_64-curl-winssl
+            mingw-w64-ucrt-x86_64-MinHook
+            mingw-w64-ucrt-x86_64-miniupnpc
+            mingw-w64-ucrt-x86_64-nodejs
+            mingw-w64-ucrt-x86_64-nsis
+            mingw-w64-ucrt-x86_64-onevpl
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-opus
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-nlohmann_json
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Configure
+        shell: msys2 {0}
+        run: cmake -B build -G Ninja -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: msys2 {0}
+        run: cmake --build build --parallel 2
+
+      - name: Package installer
+        shell: msys2 {0}
+        run: cpack -G NSIS --config ./build/CPackConfig.cmake
+
+      - name: Collect installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          $installers = Get-ChildItem -Path . -Recurse -Filter *.exe |
+            Where-Object { $_.FullName -notmatch '\\build\\.*(sunshine|audio-info|dxgi-info|vigembus)' }
+          if (-not $installers) {
+            Write-Host "No installer found. EXE files present:"
+            Get-ChildItem -Path . -Recurse -Filter *.exe | Select-Object FullName,Length
+            exit 1
+          }
+          $installer = $installers | Sort-Object Length -Descending | Select-Object -First 1
+          Copy-Item $installer.FullName "artifact\Apollo-Microphone-Low-Latency-40ms.exe"
+          Get-Item "artifact\Apollo-Microphone-Low-Latency-40ms.exe" | Select-Object FullName,Length
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Apollo-Microphone-Low-Latency-40ms
+          path: artifact/Apollo-Microphone-Low-Latency-40ms.exe
+          if-no-files-found: error
