@@ -40,7 +40,10 @@ jobs:
 
       - name: Configure
         shell: msys2 {0}
-        run: cmake -B build -G Ninja -S . -DCMAKE_BUILD_TYPE=Release
+        run: |
+          NPM_DIR="$(cygpath -w /ucrt64/lib/node_modules/npm/bin)"
+          echo "Using npm-cli.js from: $NPM_DIR"
+          cmake -B build -G Ninja -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$NPM_DIR"
 
       - name: Build
         shell: msys2 {0}
