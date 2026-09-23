@@ -45,7 +45,7 @@ namespace platf::audio {
     constexpr std::uint32_t max_packet_duration_samples = 5760;
     constexpr std::size_t max_queued_frames = decoded_sample_rate;
     constexpr std::size_t max_queued_packets = 64;
-    constexpr std::size_t target_prebuffer_packets = 4;
+    constexpr std::size_t target_prebuffer_packets = 2;
     constexpr std::size_t target_prebuffer_frames = default_packet_duration_samples * target_prebuffer_packets;
 
     template<typename T>
